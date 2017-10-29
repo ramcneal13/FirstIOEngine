@@ -148,16 +148,17 @@ class FileTarget {
 				size = statData.st_size
 				return
 			}
-			let bufWrite = FileHandle(fileDescriptor: fileFD)
+			let bufWriter = FileHandle(fileDescriptor: fileFD)
 			let bufSize = 1024
-			var buf = Data(capacity: bufSize)
-			print("buf.count(\(buf.count))")
+			var bufData = Data(capacity: bufSize)
 			for pos in 0..<bufSize {
-				buf.append(UInt8(pos&0xff))
+				bufData.append(UInt8(pos&0xff))
 			}
 			for _ in stride(from: 0, to: size, by: 1024) {
-				bufWrite.write(buf)
+				bufWriter.write(bufData)
 			}
+			bufWriter.synchronizeFile()
+			bufWriter.seek(toFileOffset: 0)
 		}
 	}
 }
