@@ -8,7 +8,6 @@
 
 import Foundation
 
-
 func main() {
 	var f:FileTarget
 	do {
@@ -23,8 +22,9 @@ func main() {
 	f.sizeStr = "1m"
 	f.prep()
 	let job = JobAction(f)
+	job.setPattern("49:rw:8k,51:randread:4k")
 	job.runTimeStr = "1h"
-	print("Size(\(f.sizeStr)), Runtime(\(job.runTimeStr))")
+	print("Size(\(f.sizeStr)), Runtime(\(job.runTimeStr)), Access(\(job.getPattern()))[\(job.isValid())]")
 }
 
 main()
