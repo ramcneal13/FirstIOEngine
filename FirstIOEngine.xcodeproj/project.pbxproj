@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		9C580FEE1FA6C84F00181EF1 /* JobAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C580FED1FA6C84F00181EF1 /* JobAction.swift */; };
+		9C580FF01FA6CAAE00181EF1 /* FileTarget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C580FEF1FA6CAAE00181EF1 /* FileTarget.swift */; };
+		9C580FF21FA6CB6000181EF1 /* utils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C580FF11FA6CB6000181EF1 /* utils.swift */; };
 		9CB00DA01FA3CE6B005A7A4A /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CB00D9F1FA3CE6B005A7A4A /* main.swift */; };
 /* End PBXBuildFile section */
 
@@ -23,6 +26,9 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		9C580FED1FA6C84F00181EF1 /* JobAction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JobAction.swift; sourceTree = "<group>"; };
+		9C580FEF1FA6CAAE00181EF1 /* FileTarget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileTarget.swift; sourceTree = "<group>"; };
+		9C580FF11FA6CB6000181EF1 /* utils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = utils.swift; sourceTree = "<group>"; };
 		9CB00D9C1FA3CE6B005A7A4A /* FirstIOEngine */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = FirstIOEngine; sourceTree = BUILT_PRODUCTS_DIR; };
 		9CB00D9F1FA3CE6B005A7A4A /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -58,6 +64,9 @@
 			isa = PBXGroup;
 			children = (
 				9CB00D9F1FA3CE6B005A7A4A /* main.swift */,
+				9C580FF11FA6CB6000181EF1 /* utils.swift */,
+				9C580FEF1FA6CAAE00181EF1 /* FileTarget.swift */,
+				9C580FED1FA6C84F00181EF1 /* JobAction.swift */,
 			);
 			path = FirstIOEngine;
 			sourceTree = "<group>";
@@ -120,7 +129,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9C580FF01FA6CAAE00181EF1 /* FileTarget.swift in Sources */,
 				9CB00DA01FA3CE6B005A7A4A /* main.swift in Sources */,
+				9C580FEE1FA6C84F00181EF1 /* JobAction.swift in Sources */,
+				9C580FF21FA6CB6000181EF1 /* utils.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
