@@ -19,12 +19,13 @@ func main() {
 		print("Unhandled system error")
 		return
 	}
-	f.sizeStr = "1m"
-	f.prep()
+	f.sizeStr = "1g"
+	f.prepFile()
 	let job = JobAction(f)
-	job.setPattern("49:rw:8k,51:randread:4k")
-	job.runTimeStr = "1h"
+	job.setPattern("100:rw:8k")
+	job.runTimeStr = "1m"
 	print("Size(\(f.sizeStr)), Runtime(\(job.runTimeStr)), Access(\(job.getPattern()))[\(job.isValid())]")
+	job.execute()
 }
 
 main()
