@@ -31,6 +31,7 @@ public class FileTarget {
 	private var statData:stat
 	private var bufData:UnsafeMutablePointer<Int64>
 	private var bufSize = 1024
+	private var removeOnClose = false
 
 	private var size:Int64 = 0
 	var sizeStr:String {
@@ -41,18 +42,20 @@ public class FileTarget {
 	
 	init(name:String) throws {
 		fileName = name
-		fileFD = open(fileName, O_RDWR | O_CREAT, 0o666)
+		var flags = O_RDWR
+		statData = stat()
+		if stat(fileName, &statData) < 0 {
+			flags |= O_CREAT
+			removeOnClose = true
+		}
+		fileFD = open(fileName, flags, 0o666)
 		if fileFD < 0 {
 			throw FileErrors.openFailure(name: fileName, error_num: errno)
-		}
-		statData = stat()
-		guard fstat(fileFD, &statData) == 0 else {
-			throw FileErrors.statFailure(error_num: errno)
 		}
 		bufData = UnsafeMutablePointer.allocate(capacity: bufSize)
 		switch mode() {
 		case .RegFile:
-			print("Input is normal file")
+			print("\(fileName): normal file")
 		default:
 			print("Invalid file")
 			throw FileErrors.invalidType
@@ -61,6 +64,9 @@ public class FileTarget {
 	deinit {
 		bufData.deallocate(capacity: bufSize)
 		close(fileFD)
+		if removeOnClose {
+			unlink(fileName)
+		}
 	}
 	
 	private func mode() -> FileMode {
@@ -80,6 +86,9 @@ public class FileTarget {
 			if statData.st_size > size {
 				/* --- File exists and is larger than we need, we're done ---- */
 				size = statData.st_size
+				return
+			} else if statData.st_size == size {
+				/* ---- File with existing data is good to go ---- */
 				return
 			}
 			let bufHandle = FileHandle(fileDescriptor: fileFD)

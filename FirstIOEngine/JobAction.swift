@@ -51,9 +51,14 @@ public class JobAction {
 			}
 		}
 		let pauseSema = DispatchSemaphore(value: 0)
-		let pauseQ = DispatchQueue(label: "Timer", attributes: .concurrent)
-		pauseQ.async {
-			sleep(UInt32(self.runTime))
+		/*
+		 * For some reason DispatchQueue.main.asyncAfter(.now() + runTime) { } isn't working.
+		 * I checked this out in the Sandbox and saw the same issue. The event never fires.
+		 * Yet creating my own queue and using the asyncAfter work which is what I'm doing
+		 * here.
+		 */
+		let runTimeQ = DispatchQueue(label: "Runtime")
+		runTimeQ.asyncAfter(deadline: .now() + runTime) {
 			self.runnerLoop = false
 			pauseSema.signal()
 		}
@@ -61,8 +66,17 @@ public class JobAction {
 		print("Finished")
 	}
 	
+	func reschedQ(_ id:String) {
+		let statQ = DispatchQueue(label: "Stats-" + id)
+		statQ.asyncAfter(deadline: .now() + 5.0) {
+			print("Tick-" + id)
+			self.reschedQ(id)
+		}
+	}
 	func runner(_ id:String) {
 		var last:Int64 = 0
+		var bytes:Int64 = 0
+		reschedQ(id)
 		while runnerLoop {
 			let ior = pattern.gen(lastBlk: last)
 			last = ior.block
@@ -71,6 +85,7 @@ public class JobAction {
 			} catch {
 				runnerLoop = false
 			}
+			bytes += Int64(ior.size)
 		}
 	}
 }
