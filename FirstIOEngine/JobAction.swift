@@ -51,6 +51,19 @@ public class JobAction {
 			var byteCount:Int64 = 0
 			while self.runnerLoop {
 				statSema.wait()
+				//
+				// I expected the following to work, but the closure
+				// is never called. Must be something stupid on my
+				// part. It's possible that the trouble lies in the
+				// extension which uses DispatchQueue.main.async{}
+				// I had issues with DispatchQueue.main.asyncAfter which
+				// failed to work both in my code here and the sandbox.
+				//
+				// statArray.remove(at: 0) {
+				//	print("$0=\($0)")
+				//	byteCount += $0
+				//}
+				/* ---- Do it the hard way ---- */
 				if let val = statArray.first {
 					byteCount += val
 				}
@@ -135,7 +148,6 @@ class Runner {
 			}
 			bytes += Int64(ior.size)
 		}
-		print("Runner(\(idStr)) exiting")
 	}
 	func stop() { runnerLoop = false}
 }
