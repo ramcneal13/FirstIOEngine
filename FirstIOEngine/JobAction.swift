@@ -40,14 +40,38 @@ public class JobAction {
 	func isValid() -> Bool { return pattern.isValid() }
 	func execute() {
 		target.prepBuffers(max: pattern.getMaxBlockSize())
-		var queues = [DispatchQueue]()
-		for idx in 0..<ioDepth {
-			queues.append(DispatchQueue(label: "runner-" + String(idx), attributes: .concurrent))
-		}
+		let runQ = DispatchQueue(label: "runners", attributes: .concurrent)
 		runnerLoop = true
-		for q in queues {
-			q.async {
-				self.runner(q.label)
+		var jobs = [Runner]()
+		let statArray = SynchronizedArray<Int64>()
+		let statSema = DispatchSemaphore(value: 0)
+		
+		runQ.async {
+			var count = 0
+			var byteCount:Int64 = 0
+			while self.runnerLoop {
+				statSema.wait()
+				if let val = statArray.first {
+					byteCount += val
+				}
+				statArray.remove(at: 0)
+
+				count += 1
+				if count == self.ioDepth {
+					count = 0
+					let message = ByteCountFormatter.string(fromByteCount: byteCount,
+					                                       countStyle: .binary)
+					print(String(format: "Throughput: %@   ", message), terminator: "\r")
+					fflush(stdout)
+					byteCount = 0
+				}
+			}
+		}
+		for i in 0..<ioDepth {
+			let r = Runner(pattern: self.pattern, target: self.target, id: String(i))
+			jobs.append(r)
+			runQ.async {
+				r.start(array: statArray, sema: statSema)
 			}
 		}
 		let pauseSema = DispatchSemaphore(value: 0)
@@ -57,26 +81,50 @@ public class JobAction {
 		 * Yet creating my own queue and using the asyncAfter work which is what I'm doing
 		 * here.
 		 */
-		let runTimeQ = DispatchQueue(label: "Runtime")
-		runTimeQ.asyncAfter(deadline: .now() + runTime) {
+		runQ.asyncAfter(deadline: .now() + runTime) {
 			self.runnerLoop = false
 			pauseSema.signal()
 		}
 		pauseSema.wait()
-		print("Finished")
+		/*
+		 * Loop flag will be cleared, but that doesn't mean the threads will stop before everything exits.
+		 */
+		for j in jobs {
+			j.stop()
+		}
+		print("\nFinished\n")
 	}
 	
-	func reschedQ(_ id:String) {
-		let statQ = DispatchQueue(label: "Stats-" + id)
-		statQ.asyncAfter(deadline: .now() + 5.0) {
-			print("Tick-" + id)
-			self.reschedQ(id)
+}
+
+class Runner {
+	private var pattern:AccessPattern
+	private var target:FileTarget
+	private var runQ:DispatchQueue
+	private var runnerLoop = false
+	private var idStr:String
+	private var bytes:Int64 = 0
+	
+	init(pattern:AccessPattern, target:FileTarget, id:String) {
+		self.pattern = pattern
+		runQ = DispatchQueue(label: "Runner", attributes: .concurrent)
+		self.target = target
+		idStr = id
+	}
+	
+	private func reschedQ(_ last:Int64, _ array:SynchronizedArray<Int64>, _ sema:DispatchSemaphore) {
+		runQ.asyncAfter(deadline: .now() + 1.0) {
+			let b = self.bytes
+			array.append(b - last)
+			sema.signal()
+			self.reschedQ(b, array, sema)
 		}
 	}
-	func runner(_ id:String) {
+
+	func start(array:SynchronizedArray<Int64>, sema:DispatchSemaphore) {
 		var last:Int64 = 0
-		var bytes:Int64 = 0
-		reschedQ(id)
+		reschedQ(0, array, sema)
+		runnerLoop = true
 		while runnerLoop {
 			let ior = pattern.gen(lastBlk: last)
 			last = ior.block
@@ -87,7 +135,9 @@ public class JobAction {
 			}
 			bytes += Int64(ior.size)
 		}
+		print("Runner(\(idStr)) exiting")
 	}
+	func stop() { runnerLoop = false}
 }
 
 public enum OpType {
