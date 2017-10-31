@@ -8,6 +8,13 @@
 
 import Foundation
 
+struct Stats {
+	var op:OpType
+	var latency:TimeInterval
+	var block:Int64
+	var size:Int
+}
+
 public class JobAction {
 	private var runTime:TimeInterval = 0.0
 	private let formatter = DateComponentsFormatter()
@@ -25,9 +32,9 @@ public class JobAction {
 	init(_ t:FileTarget) {
 		target = t
 		formatter.unitsStyle = .full
-		formatter.includesApproximationPhrase = false
+		formatter.includesApproximationPhrase = true
 		formatter.includesTimeRemainingPhrase = false
-		formatter.allowedUnits = [.minute]
+		formatter.allowedUnits = [.minute, .second, .hour, .day]
 		pattern = AccessPattern(size: target.fileSize())
 	}
 	func setPattern(_ s:String) {
@@ -43,7 +50,7 @@ public class JobAction {
 		let runQ = DispatchQueue(label: "runners", attributes: .concurrent)
 		runnerLoop = true
 		var jobs = [Runner]()
-		let statArray = SynchronizedArray<Int64>()
+		let onceASec = SynchronizedArray<Int64>()
 		let statSema = DispatchSemaphore(value: 0)
 		
 		runQ.async {
@@ -51,23 +58,10 @@ public class JobAction {
 			var byteCount:Int64 = 0
 			while self.runnerLoop {
 				statSema.wait()
-				//
-				// I expected the following to work, but the closure
-				// is never called. Must be something stupid on my
-				// part. It's possible that the trouble lies in the
-				// extension which uses DispatchQueue.main.async{}
-				// I had issues with DispatchQueue.main.asyncAfter which
-				// failed to work both in my code here and the sandbox.
-				//
-				// statArray.remove(at: 0) {
-				//	print("$0=\($0)")
-				//	byteCount += $0
-				//}
-				/* ---- Do it the hard way ---- */
-				if let val = statArray.first {
-					byteCount += val
+				if let b = onceASec.first {
+					byteCount += b
 				}
-				statArray.remove(at: 0)
+				onceASec.remove(at: 0)
 
 				count += 1
 				if count == self.ioDepth {
@@ -84,28 +78,30 @@ public class JobAction {
 			let r = Runner(pattern: self.pattern, target: self.target, id: String(i))
 			jobs.append(r)
 			runQ.async {
-				r.start(array: statArray, sema: statSema)
+				r.start(array: onceASec, sema: statSema)
 			}
 		}
-		let pauseSema = DispatchSemaphore(value: 0)
+		let commSema = DispatchSemaphore(value: 0)
 		/*
 		 * For some reason DispatchQueue.main.asyncAfter(.now() + runTime) { } isn't working.
 		 * I checked this out in the Sandbox and saw the same issue. The event never fires.
-		 * Yet creating my own queue and using the asyncAfter work which is what I'm doing
+		 * Yet creating my own queue and using the asyncAfter works which is what I'm doing
 		 * here.
 		 */
 		runQ.asyncAfter(deadline: .now() + runTime) {
 			self.runnerLoop = false
-			pauseSema.signal()
+			commSema.signal()
 		}
-		pauseSema.wait()
-		/*
-		 * Loop flag will be cleared, but that doesn't mean the threads will stop before everything exits.
-		 */
+		commSema.wait()
+		/* ---- give signal to jobs to stop ---- */
 		for j in jobs {
-			j.stop()
+			j.stop(sema: commSema)
 		}
-		print("\nFinished\n")
+		/* ---- wait for the jobs to post a signal to the semaphore ---- */
+		for _ in jobs {
+			commSema.wait()
+		}
+		print("\n")
 	}
 	
 }
@@ -117,6 +113,10 @@ class Runner {
 	private var runnerLoop = false
 	private var idStr:String
 	private var bytes:Int64 = 0
+	private var sema:DispatchSemaphore?
+	
+	private var ticker: DispatchSourceTimer?
+	private var last:Int64 = 0
 	
 	init(pattern:AccessPattern, target:FileTarget, id:String) {
 		self.pattern = pattern
@@ -125,19 +125,22 @@ class Runner {
 		idStr = id
 	}
 	
-	private func reschedQ(_ last:Int64, _ array:SynchronizedArray<Int64>, _ sema:DispatchSemaphore) {
-		runQ.asyncAfter(deadline: .now() + 1.0) {
+	func startTimer(_ array:SynchronizedArray<Int64>, _ sema:DispatchSemaphore) {
+		ticker = DispatchSource.makeTimerSource(flags: [], queue: runQ)
+		ticker?.schedule(deadline: .now(), repeating: .seconds(1))
+		ticker?.setEventHandler {
 			let b = self.bytes
-			array.append(b - last)
+			array.append(b - self.last)
+			self.last = b
 			sema.signal()
-			self.reschedQ(b, array, sema)
 		}
+		ticker?.resume()
 	}
-
+	
 	func start(array:SynchronizedArray<Int64>, sema:DispatchSemaphore) {
 		var last:Int64 = 0
-		reschedQ(0, array, sema)
 		runnerLoop = true
+		startTimer(array, sema)
 		while runnerLoop {
 			let ior = pattern.gen(lastBlk: last)
 			last = ior.block
@@ -148,8 +151,14 @@ class Runner {
 			}
 			bytes += Int64(ior.size)
 		}
+		if let s = self.sema {
+			s.signal()
+		}
 	}
-	func stop() { runnerLoop = false}
+	func stop(sema: DispatchSemaphore) {
+		runnerLoop = false
+		self.sema = sema
+	}
 }
 
 public enum OpType {

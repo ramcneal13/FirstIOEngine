@@ -23,6 +23,8 @@ func main() {
 	var patternStr = ""
 	var sizeStr = ""
 	var fileStr = ""
+	var iodepth:Int = 0
+	
 	for arg in CommandLine.arguments {
 		if skipFirst {
 			skipFirst = false
@@ -31,9 +33,15 @@ func main() {
 		switch arg.split(separator: "=")[0] {
 		case "-v": verbose = true
 		case "-f": processArg(arg) { f in fileStr = f }
-		case "-t": processArg(arg) { t in timeStr = t }
 		case "-p": processArg(arg) { p in patternStr = p }
 		case "-s": processArg(arg) { s in sizeStr = s }
+		case "-t": processArg(arg) { t in timeStr = t }
+		case "-d":
+			processArg(arg) { d in
+				if let v = Int(d) {
+					iodepth = v
+				}
+			}
 		default:
 			print("Unknown argument '\(arg)'")
 			exit(1)
@@ -57,8 +65,14 @@ func main() {
 	let job = JobAction(f)
 	job.setPattern(patternStr)
 	job.runTimeStr = timeStr
-	print("Size(\(f.sizeStr)), Runtime(\(job.runTimeStr)), Access(\(job.getPattern()))[\(job.isValid())]")
-	job.execute()
+	job.ioDepth = iodepth
+	print(String(format: "Size: %@, Runtime: %@, Pattern: %@, IODepth: %d", f.sizeStr, job.runTimeStr,
+	             job.getPattern(), job.ioDepth))
+	if job.isValid() {
+		job.execute()
+	} else {
+		print("One of the params is preventing job from starting")
+	}
 }
 
 main()
