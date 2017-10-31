@@ -1,5 +1,0 @@
-version: "Apple Swift version 4.0 (swiftlang-900.0.65.2 clang-900.0.37)"
-options: "7055f257a346245754f78a7340cdfb72"
-build_time: [1509318481, 487174000]
-inputs:
-  "/Users/rmcneal/Development/FirstIOEngine/FirstIOEngine/main.swift": [1509318481, 0]
