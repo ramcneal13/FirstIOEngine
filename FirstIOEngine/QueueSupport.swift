@@ -15,6 +15,10 @@ import Foundation
 public class SynchronizedArray<Element> {
 	fileprivate let queue = DispatchQueue(label: "io.zamzam.ZamzamKit.SynchronizedArray", attributes: .concurrent)
 	fileprivate var array = [Element]()
+	fileprivate var alternateQ:DispatchQueue?
+	init(q:DispatchQueue) {
+		alternateQ = q
+	}
 }
 
 /* ---- MARK: - Properties ---- */
@@ -97,7 +101,7 @@ public extension SynchronizedArray {
 		queue.async(flags: .barrier) {
 			let element = self.array.remove(at: index)
 			
-			DispatchQueue.main.async {
+			self.queue.async {
 				completion?(element)
 			}
 		}

@@ -50,27 +50,23 @@ public class JobAction {
 		let runQ = DispatchQueue(label: "runners", attributes: .concurrent)
 		runnerLoop = true
 		var jobs = [Runner]()
-		let onceASec = SynchronizedArray<Int64>()
+		let onceASec = SynchronizedArray<Int64>(q: runQ)
 		let statSema = DispatchSemaphore(value: 0)
+		let throughput = Throughput(ioDepth)
 		
 		runQ.async {
 			var count = 0
-			var byteCount:Int64 = 0
 			while self.runnerLoop {
+				// Once a second the Runner's will append a byte count to the 'onceASec'
+				// array. Once the samples have been collected (same number of samples
+				// as Runners) display the current throughput.
+				
 				statSema.wait()
-				if let b = onceASec.first {
-					byteCount += b
-				}
-				onceASec.remove(at: 0)
+				onceASec.remove(at: 0) { b in throughput.add(count: b) }
 
 				count += 1
 				if count == self.ioDepth {
 					count = 0
-					let message = ByteCountFormatter.string(fromByteCount: byteCount,
-					                                       countStyle: .binary)
-					print(String(format: "Throughput: %@   ", message), terminator: "\r")
-					fflush(stdout)
-					byteCount = 0
 				}
 			}
 		}
@@ -104,6 +100,27 @@ public class JobAction {
 		print("\n")
 	}
 	
+}
+
+class Throughput {
+	var totalBytes:Int64 = 0
+	var runnerCount = 0
+	var runnersSeen = 0
+	init(_ r:Int) {
+		runnerCount = r
+	}
+	func add(count:Int64) {
+		totalBytes += count
+		runnersSeen += 1
+		if runnersSeen == runnerCount {
+			runnersSeen = 0
+			let message = ByteCountFormatter.string(fromByteCount: totalBytes,
+			                                        countStyle: .binary)
+			print(String(format: "Throughput: %@   ", message), terminator: "\r")
+			fflush(stdout)
+			totalBytes = 0
+		}
+	}
 }
 
 class Runner {
