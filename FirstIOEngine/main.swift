@@ -62,7 +62,7 @@ func main() {
 	}
 	f.sizeStr = sizeStr
 	f.prepFile()
-	let job = JobAction(f)
+	let job = JobAction(f, verbose)
 	job.setPattern(patternStr)
 	job.runTimeStr = timeStr
 	job.ioDepth = iodepth

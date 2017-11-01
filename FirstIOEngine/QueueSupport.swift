@@ -45,6 +45,13 @@ public extension SynchronizedArray {
 		return result
 	}
 	
+	/// The capacity of the array
+	var capacity: Int {
+		var result = 0
+		queue.sync { result = self.array.capacity }
+		return result
+	}
+	
 	/// A Boolean value indicating whether the collection is empty.
 	var isEmpty: Bool {
 		var result = false

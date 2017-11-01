@@ -8,18 +8,12 @@
 
 import Foundation
 
-struct Stats {
-	var op:OpType
-	var latency:TimeInterval
-	var block:Int64
-	var size:Int
-}
-
 public class JobAction {
 	private var runTime:TimeInterval = 0.0
 	private let formatter = DateComponentsFormatter()
 	private var pattern:AccessPattern
 	private var runnerLoop = false
+	private var reporter:StatReporter?
 	/* ---- Number of threads to start for asynchronous I/O ---- */
 	var ioDepth = 8
 	
@@ -29,14 +23,21 @@ public class JobAction {
 	}
 	private var target:FileTarget
 	
-	init(_ t:FileTarget) {
+	init(_ t:FileTarget, _ verbose:Bool = false) {
 		target = t
 		formatter.unitsStyle = .full
 		formatter.includesApproximationPhrase = true
 		formatter.includesTimeRemainingPhrase = false
 		formatter.allowedUnits = [.minute, .second, .hour, .day]
 		pattern = AccessPattern(size: target.fileSize())
+		if verbose {
+			reporter = StatReporter()
+		}
 	}
+	deinit {
+		reporter?.stop()
+	}
+	
 	func setPattern(_ s:String) {
 		pattern.text = s
 	}
@@ -74,7 +75,7 @@ public class JobAction {
 			let r = Runner(pattern: self.pattern, target: self.target, id: String(i))
 			jobs.append(r)
 			runQ.async {
-				r.start(array: onceASec, sema: statSema)
+				r.start(array: onceASec, sema: statSema, report: self.reporter)
 			}
 		}
 		let commSema = DispatchSemaphore(value: 0)
@@ -97,28 +98,39 @@ public class JobAction {
 		for _ in jobs {
 			commSema.wait()
 		}
+		reporter?.dumpStats()
+		reporter?.stop()
 		print("\n")
 	}
 	
 }
 
 class Throughput {
+	private var runQ:DispatchQueue
 	var totalBytes:Int64 = 0
 	var runnerCount = 0
 	var runnersSeen = 0
+	let dateFormat = DateFormatter()
+	
 	init(_ r:Int) {
+		runQ = DispatchQueue(label: "throughput", attributes: .concurrent)
 		runnerCount = r
+		dateFormat.dateStyle = .none
+		dateFormat.timeStyle = .medium
 	}
 	func add(count:Int64) {
-		totalBytes += count
-		runnersSeen += 1
-		if runnersSeen == runnerCount {
-			runnersSeen = 0
-			let message = ByteCountFormatter.string(fromByteCount: totalBytes,
-			                                        countStyle: .binary)
-			print(String(format: "Throughput: %@   ", message), terminator: "\r")
-			fflush(stdout)
-			totalBytes = 0
+		runQ.sync {
+			totalBytes += count
+			runnersSeen += 1
+			if runnersSeen == runnerCount {
+				runnersSeen = 0
+				let message = ByteCountFormatter.string(fromByteCount: totalBytes,
+				                                        countStyle: .binary)
+				print(dateFormat.string(from: NSDate(timeIntervalSinceNow: 0) as Date), terminator: "")
+				print(String(format: " Throughput: %@   ", message), terminator: "\r")
+				fflush(stdout)
+				totalBytes = 0
+			}
 		}
 	}
 }
@@ -154,18 +166,26 @@ class Runner {
 		ticker?.resume()
 	}
 	
-	func start(array:SynchronizedArray<Int64>, sema:DispatchSemaphore) {
+	func start(array:SynchronizedArray<Int64>, sema:DispatchSemaphore, report:StatReporter?) {
 		var last:Int64 = 0
 		runnerLoop = true
 		startTimer(array, sema)
 		while runnerLoop {
 			let ior = pattern.gen(lastBlk: last)
 			last = ior.block
+			var s = Stats(op: .None, latency: 0, block: 0, size: 0)
 			do {
+				let start = DispatchTime.now()
 				try target.doOp(request: ior)
+				let end = DispatchTime.now()
+				s.latency = end.uptimeNanoseconds - start.uptimeNanoseconds
 			} catch {
 				runnerLoop = false
 			}
+			s.op = ior.op
+			s.block = ior.block
+			s.size = ior.size
+			report?.sendStat(entry: s)
 			bytes += Int64(ior.size)
 		}
 		if let s = self.sema {
