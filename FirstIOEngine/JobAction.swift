@@ -103,7 +103,6 @@ class Throughput {
 	private var runnerCount = 0
 	private var runnersSeen = 0
 	private let dateFormat = DateFormatter()
-	private var debugBytes:Int64 = 0
 	
 	init(_ r:Int) {
 		runQ = DispatchQueue(label: "throughput", attributes: .concurrent)
@@ -116,7 +115,6 @@ class Throughput {
 		runnersSeen += 1
 		if runnersSeen == runnerCount {
 			runnersSeen = 0
-			debugBytes += totalBytes
 			let message = ByteCountFormatter.string(fromByteCount: totalBytes,
 			                                        countStyle: .binary)
 			print(dateFormat.string(from: NSDate(timeIntervalSinceNow: 0) as Date), terminator: "")
