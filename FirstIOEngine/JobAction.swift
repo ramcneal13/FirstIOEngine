@@ -56,19 +56,13 @@ public class JobAction {
 		let throughput = Throughput(ioDepth)
 		
 		runQ.async {
-			var count = 0
 			while self.runnerLoop {
 				// Once a second the Runner's will append a byte count to the 'onceASec'
 				// array. Once the samples have been collected (same number of samples
 				// as Runners) display the current throughput.
 				
 				statSema.wait()
-				onceASec.remove(at: 0) { b in throughput.add(count: b) }
-
-				count += 1
-				if count == self.ioDepth {
-					count = 0
-				}
+				onceASec.remove(at: 0, async: false) { b in throughput.add(count: b) }
 			}
 		}
 		for i in 0..<ioDepth {
@@ -79,17 +73,12 @@ public class JobAction {
 			}
 		}
 		let commSema = DispatchSemaphore(value: 0)
-		/*
-		 * For some reason DispatchQueue.main.asyncAfter(.now() + runTime) { } isn't working.
-		 * I checked this out in the Sandbox and saw the same issue. The event never fires.
-		 * Yet creating my own queue and using the asyncAfter works which is what I'm doing
-		 * here.
-		 */
 		runQ.asyncAfter(deadline: .now() + runTime) {
 			self.runnerLoop = false
 			commSema.signal()
 		}
 		commSema.wait()
+		print("\nTime expired, waiting for jobs to complete")
 		/* ---- give signal to jobs to stop ---- */
 		for j in jobs {
 			j.stop(sema: commSema)
@@ -98,19 +87,23 @@ public class JobAction {
 		for _ in jobs {
 			commSema.wait()
 		}
-		reporter?.dumpStats()
 		reporter?.stop()
-		print("\n")
+		if let r = reporter {
+			r.dumpStats(runtime: Int64(runTime))
+		} else {
+			print("\n")
+		}
 	}
 	
 }
 
 class Throughput {
 	private var runQ:DispatchQueue
-	var totalBytes:Int64 = 0
-	var runnerCount = 0
-	var runnersSeen = 0
-	let dateFormat = DateFormatter()
+	private var totalBytes:Int64 = 0
+	private var runnerCount = 0
+	private var runnersSeen = 0
+	private let dateFormat = DateFormatter()
+	private var debugBytes:Int64 = 0
 	
 	init(_ r:Int) {
 		runQ = DispatchQueue(label: "throughput", attributes: .concurrent)
@@ -119,18 +112,17 @@ class Throughput {
 		dateFormat.timeStyle = .medium
 	}
 	func add(count:Int64) {
-		runQ.sync {
-			totalBytes += count
-			runnersSeen += 1
-			if runnersSeen == runnerCount {
-				runnersSeen = 0
-				let message = ByteCountFormatter.string(fromByteCount: totalBytes,
-				                                        countStyle: .binary)
-				print(dateFormat.string(from: NSDate(timeIntervalSinceNow: 0) as Date), terminator: "")
-				print(String(format: " Throughput: %@   ", message), terminator: "\r")
-				fflush(stdout)
-				totalBytes = 0
-			}
+		totalBytes += count
+		runnersSeen += 1
+		if runnersSeen == runnerCount {
+			runnersSeen = 0
+			debugBytes += totalBytes
+			let message = ByteCountFormatter.string(fromByteCount: totalBytes,
+			                                        countStyle: .binary)
+			print(dateFormat.string(from: NSDate(timeIntervalSinceNow: 0) as Date), terminator: "")
+			print(String(format: " Throughput: %@   ", message), terminator: "\r")
+			fflush(stdout)
+			totalBytes = 0
 		}
 	}
 }
@@ -158,6 +150,7 @@ class Runner {
 		ticker = DispatchSource.makeTimerSource(flags: [], queue: runQ)
 		ticker?.schedule(deadline: .now(), repeating: .seconds(1))
 		ticker?.setEventHandler {
+			// This is not atomic and could produce unexpected results.
 			let b = self.bytes
 			array.append(b - self.last)
 			self.last = b
@@ -175,10 +168,7 @@ class Runner {
 			last = ior.block
 			var s = Stats(op: .None, latency: 0, block: 0, size: 0)
 			do {
-				let start = DispatchTime.now()
-				try target.doOp(request: ior)
-				let end = DispatchTime.now()
-				s.latency = end.uptimeNanoseconds - start.uptimeNanoseconds
+				try s.latency = timeBlockWithMachThrow { try target.doOp(request: ior) }
 			} catch {
 				runnerLoop = false
 			}
@@ -188,13 +178,12 @@ class Runner {
 			report?.sendStat(entry: s)
 			bytes += Int64(ior.size)
 		}
-		if let s = self.sema {
-			s.signal()
-		}
+		self.sema?.signal()
 	}
+	
 	func stop(sema: DispatchSemaphore) {
-		runnerLoop = false
 		self.sema = sema
+		runnerLoop = false
 	}
 }
 

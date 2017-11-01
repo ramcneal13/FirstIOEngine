@@ -17,6 +17,11 @@ func processArg(_ arg:String, complete:((String) -> Void)) {
 	complete(String(iArg[1]))
 }
 
+func usage() {
+	print(String(format: "Usage: %@ -f=<filename> -d=<io-depth> -p=<pattern> -t=<time> [-s=<size> -v]", commandName))
+}
+
+var commandName:String = ""
 func main() {
 	var verbose = false, skipFirst = true
 	var timeStr = ""
@@ -28,6 +33,7 @@ func main() {
 	for arg in CommandLine.arguments {
 		if skipFirst {
 			skipFirst = false
+			commandName = arg
 			continue
 		}
 		switch arg.split(separator: "=")[0] {
@@ -46,6 +52,10 @@ func main() {
 			print("Unknown argument '\(arg)'")
 			exit(1)
 		}
+	}
+	if fileStr == "" || iodepth == 0 || patternStr == "" || timeStr == "" {
+		usage()
+		exit(1)
 	}
 	if verbose {
 		print("[]---- FirstIOFIle ----[]")

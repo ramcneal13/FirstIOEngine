@@ -14,6 +14,66 @@ enum ConvertMultiplier {
 	case ConvertError
 }
 
+extension TimeInterval{
+	var microseconds: Int { return Int((self.truncatingRemainder(dividingBy: 1)) * 1_000_000) }
+	var seconds: Int { return Int(self.remainder(dividingBy: 60)) }
+	var minutes: Int { return Int((self/60).remainder(dividingBy: 60)) }
+	var hours: Int { return Int(self / (60*60)) }
+	var stringTime: String {
+		if self.hours != 0 {
+			return String(format: "%dh%02dm%02ds", self.hours, self.minutes, self.seconds)
+		} else if self.minutes != 0 {
+			return String(format: "%dm%02ds.%06dus", self.minutes, self.seconds, self.microseconds)
+		} else if self.microseconds != 0 {
+			if self.microseconds < 1_000 {
+				return String(format: "%dus", self.microseconds)
+			} else {
+				return String(format: "%d.%03dms", self.microseconds / 1_000,
+					      self.microseconds % 1_000)
+			}
+		} else {
+			return "\(self.seconds)s"
+		}
+	}
+}
+
+public func stringFromTime(interval: TimeInterval) -> String {
+	let ms = Int(interval.truncatingRemainder(dividingBy: 1) * 1000)
+	let formatter = DateComponentsFormatter()
+	formatter.allowedUnits = [.hour, .minute, .second, .nanosecond]
+	return formatter.string(from: interval)! + ".\(ms)"
+}
+
+public func timeBlockWithMach(_ block: () -> Void) -> TimeInterval {
+	var info = mach_timebase_info()
+	guard mach_timebase_info(&info) == KERN_SUCCESS else { return -1 }
+	
+	let start = mach_absolute_time()
+	//Block execution to time!
+	block()
+	let end = mach_absolute_time()
+	
+	let elapsed = end - start
+	
+	let nanos = elapsed * UInt64(info.numer) / UInt64(info.denom)
+	return TimeInterval(nanos) / TimeInterval(NSEC_PER_SEC)
+}
+
+public func timeBlockWithMachThrow(_ block: () throws -> Void) throws -> TimeInterval {
+	var info = mach_timebase_info()
+	guard mach_timebase_info(&info) == KERN_SUCCESS else { return -1 }
+	
+	let start = mach_absolute_time()
+	//Block execution to time!
+	try block()
+	let end = mach_absolute_time()
+	
+	let elapsed = end - start
+	
+	let nanos = elapsed * UInt64(info.numer) / UInt64(info.denom)
+	return TimeInterval(nanos) / TimeInterval(NSEC_PER_SEC)
+}
+
 public func convertHumanSize(_ sizeStr:String) -> Int64 {
 	var size:Int64 = 0
 	for multiplier in "kmgtKMGT" {

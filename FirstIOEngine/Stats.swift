@@ -10,7 +10,7 @@ import Foundation
 
 public struct Stats {
 	var op:OpType
-	var latency:UInt64
+	var latency:TimeInterval
 	var block:Int64
 	var size:Int
 }
@@ -26,12 +26,12 @@ class StatReporter {
 	private var ioWrites:Int64 = 0
 	private var bytesRead:Int64 = 0
 	private var bytesWrite:Int64 = 0
-	private var lowLatRead:UInt64 = 0xbad_cafe_dead_beef
-	private var avgLatRead:UInt64 = 0
-	private var highLatRead:UInt64 = 0
-	private var lowLatWrite:UInt64 = 0xbad_cafe_dead_beef
-	private var avgLatWrite:UInt64 = 0
-	private var highLatWrite:UInt64 = 0
+	private var lowLatRead:TimeInterval = 1000.0
+	private var avgLatRead:TimeInterval = 0.0
+	private var highLatRead:TimeInterval = 0.0
+	private var lowLatWrite:TimeInterval = 1000.0
+	private var avgLatWrite:TimeInterval = 0.0
+	private var highLatWrite:TimeInterval = 0.0
 	
 	init() {
 		statQ = DispatchQueue(label: "Stat Information", attributes: .concurrent)
@@ -40,7 +40,7 @@ class StatReporter {
 		statQ.async {
 			while self.doLoop {
 				self.commSemq.wait()
-				self.commChannel.remove(at: 0, completion: self.gatherStats)
+				self.commChannel.remove(at: 0, async: true, completion: self.gatherStats)
 			}
 		}
 	}
@@ -57,41 +57,54 @@ class StatReporter {
 	// a .barrier directive. It doesn't provide barrier protection for the
 	// closure.
 	private func gatherStats(_ stat:Stats) {
-		statQ.async(flags: .barrier) {
-			switch stat.op {
-			case .FileRead:
-				self.ioReads += 1
-				self.bytesRead += Int64(stat.size)
-				if self.lowLatRead > stat.latency {
-					self.lowLatRead = stat.latency
-				}
-				if self.highLatRead < stat.latency {
-					self.highLatRead = stat.latency
-				}
-				self.avgLatRead += stat.latency
-			case .FileWrite:
-				self.ioWrites += 1
-				self.bytesWrite += Int64(stat.size)
-				if self.lowLatWrite > stat.latency {
-					self.lowLatWrite = stat.latency
-				}
-				if self.highLatWrite < stat.latency {
-					self.highLatWrite = stat.latency
-				}
-				self.avgLatWrite += stat.latency
-			default:
-				return
+		switch stat.op {
+		case .FileRead:
+			self.ioReads += 1
+			self.bytesRead += Int64(stat.size)
+			if self.lowLatRead > stat.latency {
+				self.lowLatRead = stat.latency
 			}
+			if self.highLatRead < stat.latency {
+				self.highLatRead = stat.latency
+			}
+			self.avgLatRead += stat.latency
+		case .FileWrite:
+			self.ioWrites += 1
+			self.bytesWrite += Int64(stat.size)
+			if self.lowLatWrite > stat.latency {
+				self.lowLatWrite = stat.latency
+			}
+			if self.highLatWrite < stat.latency {
+				self.highLatWrite = stat.latency
+			}
+			self.avgLatWrite += stat.latency
+		default:
+			print("Unknown op(\(stat.op))")
+			return
 		}
 	}
 	
-	func dumpStats() {
-		print(String(format: "Channel: count=%d, capacity=%d", commChannel.count, commChannel.capacity))
-		var msg = String(format: "Read: low=%d/avg=%d/high=%d", lowLatRead, avgLatRead / UInt64(ioReads),
-		                 highLatRead)
+	func dumpStats(runtime runTimeSeconds:Int64) {
+		/* ---- Prevent possible divide by zero ---- */
+		if ioReads == 0 {
+			ioReads = 1
+		}
+		print(String(format: "Avg throughput: %@",
+			     ByteCountFormatter.string(fromByteCount: (bytesRead + bytesWrite) / runTimeSeconds,
+						       countStyle: .binary)))
+
+		var msg = String(format: "Read: low=%@/avg=%@/high=%@", lowLatRead.stringTime,
+				TimeInterval(avgLatRead / TimeInterval(ioReads)).stringTime,
+				highLatRead.stringTime)
+
 		print(msg)
-		msg = String(format: "Write: low=%d/avg=%d/high=%d", lowLatWrite, avgLatWrite / UInt64(ioWrites),
-		             highLatWrite)
+		
+		if ioWrites == 0 {
+			ioWrites = 1
+		}
+		msg = String(format: "Write: low=%@/avg=%@/high=%@", lowLatWrite.stringTime,
+			     TimeInterval(avgLatWrite / TimeInterval(ioWrites)).stringTime,
+		             highLatWrite.stringTime)
 		print(msg)
 	}
 }
