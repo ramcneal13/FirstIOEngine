@@ -102,15 +102,10 @@ class Throughput {
 	private var totalBytes:Int64 = 0
 	private var runnerCount = 0
 	private var runnersSeen = 0
-	private let dateFormat = DateFormatter()
-	private let startTime:Date = Date()
 	
 	init(_ r:Int) {
 		runQ = DispatchQueue(label: "throughput", attributes: .concurrent)
 		runnerCount = r
-		dateFormat.dateStyle = .none
-		dateFormat.timeStyle = .medium
-		print("---- \(startTime) ----")
 	}
 	func add(count:Int64) {
 		totalBytes += count
@@ -120,8 +115,6 @@ class Throughput {
 			let message = ByteCountFormatter.string(fromByteCount: totalBytes,
 			                                        countStyle: .binary)
 
-			let elapsedTime = Date().timeIntervalSince(startTime)
-			print(String(format: "[%@] ", elapsedTime.stringTime), terminator: "")
 			print(String(format: "Throughput: %@   ", message), terminator: "\r")
 			fflush(stdout)
 			totalBytes = 0
