@@ -21,6 +21,10 @@ public class JobAction {
 		get {return formatter.string(from: runTime)!}
 		set(input) { runTime = convertTimeStr(input)}
 	}
+	var patternStr:String {
+		get {return pattern.text}
+		set(input) {pattern.text = input}
+	}
 	private var target:FileTarget
 	
 	init(_ t:FileTarget, _ verbose:Bool = false) {
@@ -38,12 +42,6 @@ public class JobAction {
 		reporter?.stop()
 	}
 	
-	func setPattern(_ s:String) {
-		pattern.text = s
-	}
-	func getPattern() -> String {
-		return pattern.text
-	}
 	/* ---- test for anything that might prevent JobAction from starting ---- */
 	func isValid() -> Bool { return pattern.isValid() }
 	func execute() {
@@ -78,7 +76,7 @@ public class JobAction {
 			commSema.signal()
 		}
 		commSema.wait()
-		print("\nTime expired, waiting for jobs to complete")
+
 		/* ---- give signal to jobs to stop ---- */
 		for j in jobs {
 			j.stop(sema: commSema)

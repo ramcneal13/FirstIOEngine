@@ -59,13 +59,6 @@ public class FileTarget {
 			}
 		}
 		bufData = UnsafeMutablePointer.allocate(capacity: bufSize)
-		switch mode() {
-		case .RegFile:
-			print("\(fileName): normal file")
-		default:
-			print("Invalid file")
-			throw FileErrors.invalidType
-		}
 	}
 	deinit {
 		bufData.deallocate(capacity: bufSize)

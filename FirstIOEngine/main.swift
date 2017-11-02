@@ -71,17 +71,12 @@ func main() {
 				exit(1)
 			}
 			let job = JobAction(f, verbose)
-			parser?.setParam(section: jobName, param: "pattern") { v in job.setPattern(v)}
+			parser?.setParam(section: jobName, param: "pattern") { v in job.patternStr = v}
 			parser?.setParam(section: jobName, param: "runtime") { v in job.runTimeStr = v}
-			parser?.setParam(section: jobName, param: "iodepth") { v in
-				if let iodepth = Int(v) {
-					job.ioDepth = iodepth
-				} else {
-					job.ioDepth = 1
-				}
-			}
+			parser?.setParam(section: jobName, param: "iodepth") { v in job.ioDepth = Int(v) ?? 1}
+
 			print(String(format: "Size: %@, Runtime: %@, Pattern: %@, IODepth: %d", f.sizeStr, job.runTimeStr,
-				     job.getPattern(), job.ioDepth))
+				     job.patternStr, job.ioDepth))
 			if job.isValid() {
 				job.execute()
 			} else {

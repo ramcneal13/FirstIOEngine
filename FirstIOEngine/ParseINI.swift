@@ -22,6 +22,7 @@ public class ParseINIConfig {
 	private var configStrings:[String]
 	private var sections:[String:sectionData] = [:]
 	private var verbose = false
+	private let GlobalSection = "global"
 	
 	init(name file:String) throws {
 		fileName = file
@@ -63,7 +64,7 @@ public class ParseINIConfig {
 		for l in configStrings {
 			if let sec = boundedName(str: l, beg: "[", end: "]") {
 				switch sec {
-				case "global":
+				case GlobalSection:
 					workingSection = sec
 				default:
 					let possibleJob = sec.split(separator: " ")
@@ -114,7 +115,7 @@ public class ParseINIConfig {
 				// If the request isn't in the current section see
 				// if the global section has the parameter set and if
 				// so return that one.
-				if let p = sections["global"]![param] {
+				if let p = sections[GlobalSection]![param] {
 					return p
 				}
 			}
@@ -125,7 +126,9 @@ public class ParseINIConfig {
 	func requestJobs() -> [String] {
 		var rval = [String]()
 		for (k, _) in sections {
-			rval.append(k)
+			if k != GlobalSection {
+				rval.append(k)
+			}
 		}
 		return rval
 	}
