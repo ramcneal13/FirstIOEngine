@@ -23,12 +23,9 @@ func usage() {
 
 var commandName:String = ""
 func main() {
-	var verbose = false, skipFirst = true
-	var timeStr = ""
-	var patternStr = ""
-	var sizeStr = ""
-	var fileStr = ""
-	var iodepth:Int = 0
+	var skipFirst = true, verbose = false
+	var configStr = ""
+	var parser:ParseINIConfig?
 	
 	for arg in CommandLine.arguments {
 		if skipFirst {
@@ -37,54 +34,60 @@ func main() {
 			continue
 		}
 		switch arg.split(separator: "=")[0] {
-		case "-v": verbose = true
-		case "-f": processArg(arg) { f in fileStr = f }
-		case "-p": processArg(arg) { p in patternStr = p }
-		case "-s": processArg(arg) { s in sizeStr = s }
-		case "-t": processArg(arg) { t in timeStr = t }
-		case "-d":
-			processArg(arg) { d in
-				if let v = Int(d) {
-					iodepth = v
-				}
-			}
+		case "-c": processArg(arg) { c in configStr = c }
 		default:
 			print("Unknown argument '\(arg)'")
 			exit(1)
 		}
 	}
-	if fileStr == "" || iodepth == 0 || patternStr == "" || timeStr == "" {
-		usage()
-		exit(1)
-	}
-	if verbose {
-		print("[]---- FirstIOFIle ----[]")
-	}
-	var f:FileTarget
 	do {
-		try f = FileTarget(name: fileStr)
+		try parser = ParseINIConfig(name: configStr)
 	} catch FileErrors.openFailure(let fileName, let e) {
-		print("Problems with '\(fileName)', errno=\(e)")
+		print("Failed to open \(fileName), errno=\(e)")
 		exit(1)
 	} catch {
-		print("Unhandled system error")
+		print("Some other odd error occurred")
 		exit(1)
 	}
-	f.sizeStr = sizeStr
-	if f.prepFile() == false {
-		print("Failed to prep \(fileStr), probably invalid size")
+	if parser?.parse() == false {
 		exit(1)
 	}
-	let job = JobAction(f, verbose)
-	job.setPattern(patternStr)
-	job.runTimeStr = timeStr
-	job.ioDepth = iodepth
-	print(String(format: "Size: %@, Runtime: %@, Pattern: %@, IODepth: %d", f.sizeStr, job.runTimeStr,
-	             job.getPattern(), job.ioDepth))
-	if job.isValid() {
-		job.execute()
-	} else {
-		print("One of the params is preventing job from starting")
+	parser?.setParam(section: "global", param: "verbose") { _ in verbose = true }
+
+	if let jobList = parser?.requestJobs() {
+		for jobName in jobList {
+			var fileName = ""
+			parser?.setParam(section: jobName, param: "name") { f in fileName = f }
+			var f:FileTarget
+			do {
+				try f = FileTarget(name: fileName)
+			} catch {
+				print("Failed to open: \(fileName)")
+				exit(1)
+			}
+			parser?.setParam(section: jobName, param: "size") { s in f.sizeStr = s }
+			if f.prepFile() == false {
+				print("Failed to prep \(fileName), probably invalid size")
+				exit(1)
+			}
+			let job = JobAction(f, verbose)
+			parser?.setParam(section: jobName, param: "pattern") { v in job.setPattern(v)}
+			parser?.setParam(section: jobName, param: "runtime") { v in job.runTimeStr = v}
+			parser?.setParam(section: jobName, param: "iodepth") { v in
+				if let iodepth = Int(v) {
+					job.ioDepth = iodepth
+				} else {
+					job.ioDepth = 1
+				}
+			}
+			print(String(format: "Size: %@, Runtime: %@, Pattern: %@, IODepth: %d", f.sizeStr, job.runTimeStr,
+				     job.getPattern(), job.ioDepth))
+			if job.isValid() {
+				job.execute()
+			} else {
+				print("One of the params is preventing job from starting")
+			}
+		}
 	}
 }
 

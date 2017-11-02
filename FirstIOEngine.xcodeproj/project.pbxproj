@@ -13,6 +13,7 @@
 		9C580FF41FA7D23C00181EF1 /* QueueSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9C580FF31FA7D23C00181EF1 /* QueueSupport.swift */; };
 		9CA9B7991FA9770600F3D546 /* Stats.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CA9B7981FA9770600F3D546 /* Stats.swift */; };
 		9CB00DA01FA3CE6B005A7A4A /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CB00D9F1FA3CE6B005A7A4A /* main.swift */; };
+		9CB2D9481FAB8FA800DC52B4 /* ParseINI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CB2D9471FAB8FA800DC52B4 /* ParseINI.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -35,6 +36,7 @@
 		9CA9B7981FA9770600F3D546 /* Stats.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Stats.swift; sourceTree = "<group>"; };
 		9CB00D9C1FA3CE6B005A7A4A /* FirstIOEngine */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = FirstIOEngine; sourceTree = BUILT_PRODUCTS_DIR; };
 		9CB00D9F1FA3CE6B005A7A4A /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
+		9CB2D9471FAB8FA800DC52B4 /* ParseINI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParseINI.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -72,6 +74,7 @@
 				9C580FEF1FA6CAAE00181EF1 /* FileTarget.swift */,
 				9C580FF31FA7D23C00181EF1 /* QueueSupport.swift */,
 				9C580FED1FA6C84F00181EF1 /* JobAction.swift */,
+				9CB2D9471FAB8FA800DC52B4 /* ParseINI.swift */,
 				9CA9B7981FA9770600F3D546 /* Stats.swift */,
 			);
 			path = FirstIOEngine;
@@ -138,6 +141,7 @@
 				9C580FF01FA6CAAE00181EF1 /* FileTarget.swift in Sources */,
 				9CA9B7991FA9770600F3D546 /* Stats.swift in Sources */,
 				9CB00DA01FA3CE6B005A7A4A /* main.swift in Sources */,
+				9CB2D9481FAB8FA800DC52B4 /* ParseINI.swift in Sources */,
 				9C580FEE1FA6C84F00181EF1 /* JobAction.swift in Sources */,
 				9C580FF21FA6CB6000181EF1 /* utils.swift in Sources */,
 				9C580FF41FA7D23C00181EF1 /* QueueSupport.swift in Sources */,
