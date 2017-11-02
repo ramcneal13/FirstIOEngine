@@ -11,6 +11,7 @@ import Foundation
 public enum FileErrors: Error {
 	case openFailure(name:String, error_num:Int32)
 	case statFailure(error_num:Int32)
+	case badFileSize
 	case invalidType
 	case readFailure(block:Int64)
 	case writeFailure(block:Int64)
@@ -52,6 +53,11 @@ public class FileTarget {
 		if fileFD < 0 {
 			throw FileErrors.openFailure(name: fileName, error_num: errno)
 		}
+		if removeOnClose {
+			guard stat(fileName, &statData) == 0 else {
+				throw FileErrors.statFailure(error_num: errno)
+			}
+		}
 		bufData = UnsafeMutablePointer.allocate(capacity: bufSize)
 		switch mode() {
 		case .RegFile:
@@ -81,28 +87,31 @@ public class FileTarget {
 		}
 	}
 	
-	func prepFile() {
+	func prepFile() -> Bool {
 		if mode() == .RegFile {
 			if statData.st_size > size {
 				/* --- File exists and is larger than we need, we're done ---- */
 				size = statData.st_size
-				return
+				return true
+			} else if statData.st_size == 0 && size == 0 {
+				return false
 			} else if statData.st_size == size {
 				/* ---- File with existing data is good to go ---- */
-				return
+				return true
 			}
 			let bufHandle = FileHandle(fileDescriptor: fileFD)
-			let bufSize = 1024
+			let bufSize = 1024 * 1024
 			var bufData = Data(capacity: bufSize)
 			for pos in 0..<bufSize {
 				bufData.append(UInt8(pos&0xff))
 			}
-			for _ in stride(from: 0, to: size, by: 1024) {
+			for _ in stride(from: 0, to: size, by: bufSize) {
 				bufHandle.write(bufData)
 			}
 			bufHandle.synchronizeFile()
 			bufHandle.seek(toFileOffset: 0)
 		}
+		return true
 	}
 	func prepBuffers(max size:Int) {
 		bufData.deallocate(capacity: bufSize)

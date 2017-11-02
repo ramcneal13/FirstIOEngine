@@ -71,7 +71,10 @@ func main() {
 		exit(1)
 	}
 	f.sizeStr = sizeStr
-	f.prepFile()
+	if f.prepFile() == false {
+		print("Failed to prep \(fileStr), probably invalid size")
+		exit(1)
+	}
 	let job = JobAction(f, verbose)
 	job.setPattern(patternStr)
 	job.runTimeStr = timeStr
