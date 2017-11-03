@@ -21,6 +21,7 @@ class StatReporter {
 	private var commSemq:DispatchSemaphore
 	private var statQ:DispatchQueue
 	private var doLoop = true
+	private let histo:Histogram = Histogram()
 	
 	private var ioReads:Int64 = 0
 	private var ioWrites:Int64 = 0
@@ -82,6 +83,7 @@ class StatReporter {
 			print("Unknown op(\(stat.op))")
 			return
 		}
+		histo.tally(t: stat.latency)
 	}
 
 	func dumpStats(runtime runTimeSeconds:Int64) {
@@ -111,5 +113,6 @@ class StatReporter {
 			     TimeInterval(avgLatWrite / TimeInterval(ioWrites)).stringTime,
 		             highLatWrite.stringTime)
 		print(msg)
+		histo.display()
 	}
 }
