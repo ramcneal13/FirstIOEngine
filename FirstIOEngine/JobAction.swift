@@ -17,7 +17,33 @@ public class JobAction {
 	private var verbose:Bool = false
 	/* ---- Number of threads to start for asynchronous I/O ---- */
 	private var ioDepth = 1
-	
+	private var target:FileTarget?
+	private var fileName:String = ""
+	private var sizeStr_l:String = ""
+
+	var sizeStr:String {
+		get { return target?.sizeStr ?? "0" }
+		set(input) {
+			sizeStr_l = input
+			target?.sizeStr = input
+			pattern.setSize(v: target?.getSize() ?? 0)
+		}
+	}
+	var fileNameStr:String {
+		get { return fileName}
+		set(input) {
+			do {
+				try target = FileTarget(name: input)
+			} catch {
+				print("Failed to open \(input)")
+			}
+			fileName = input
+			if sizeStr_l != "" {
+				target?.sizeStr = sizeStr_l
+			}
+			pattern.setSize(v: target?.getSize() ?? 0)
+		}
+	}
 	var runTimeStr:String {
 		get {return formatter.string(from: runTime)!}
 		set(input) { runTime = convertTimeStr(input)}
@@ -41,28 +67,32 @@ public class JobAction {
 			}
 		}
 	}
-	private var target:FileTarget
 	
-	init(_ t:FileTarget, _ v:Bool = false) {
+	init(_ v:Bool = false) {
 		verbose = v
-		target = t
 		formatter.unitsStyle = .full
 		formatter.includesApproximationPhrase = true
 		formatter.includesTimeRemainingPhrase = false
 		formatter.allowedUnits = [.minute, .second, .hour, .day]
-		pattern = AccessPattern(size: target.fileSize())
+		pattern = AccessPattern()
 		if verbose {
 			reporter = StatReporter()
 		}
 	}
 	deinit {
+		self.close()
+	}
+	func close() {
+		target?.close()
 		reporter?.stop()
 	}
+	
+	func prep() -> Bool { return target?.prepFile() ?? false}
 	
 	/* ---- test for anything that might prevent JobAction from starting ---- */
 	func isValid() -> Bool { return pattern.isValid() }
 	func execute() {
-		target.prepBuffers(max: pattern.getMaxBlockSize())
+		target?.prepBuffers(max: pattern.getMaxBlockSize())
 		let runQ = DispatchQueue(label: "runners", attributes: .concurrent)
 		runnerLoop = true
 		var jobs = [Runner]()
@@ -81,7 +111,7 @@ public class JobAction {
 			}
 		}
 		for i in 0..<ioDepth {
-			let r = Runner(pattern: self.pattern, target: self.target, id: String(i))
+			let r = Runner(pattern: self.pattern, target: self.target!, id: String(i))
 			jobs.append(r)
 			runQ.async {
 				r.start(array: onceASec, sema: statSema, report: self.reporter)
@@ -102,11 +132,9 @@ public class JobAction {
 		for _ in jobs {
 			commSema.wait()
 		}
-		reporter?.stop()
 		print("")
-		if let r = reporter {
-			r.dumpStats(runtime: Int64(runTime))
-		}
+		reporter?.stop()
+		reporter?.dumpStats(runtime: Int64(runTime))
 	}
 	
 }
@@ -231,7 +259,7 @@ public struct ioRequest {
 
 class AccessPattern {
 	var rawPattern:String = ""
-	let fileSize:Int64
+	var fileSize:Int64 = 0
 	var valid:Bool = false
 	var largestBlockRequest = 0
 	var text:String {
@@ -249,11 +277,11 @@ class AccessPattern {
 	}
 	var accessArray:[accessEntry]
 	
-	init(size s:Int64) {
+	init() {
 		accessArray = [accessEntry]()
-		fileSize = s
 	}
 
+	func setSize(v:Int64) { fileSize = v }
 	func isValid() -> Bool { return valid }
 	func gen(lastBlk last:Int64) -> ioRequest {
 		var r = Int(arc4random_uniform(100))

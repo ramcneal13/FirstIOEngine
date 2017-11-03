@@ -39,7 +39,7 @@ public class FileTarget {
 		get {return ByteCountFormatter.string(fromByteCount: size, countStyle: .binary)}
 		set(input) { size = convertHumanSize(input)}
 	}
-	func fileSize() -> Int64 { return size }
+	func getSize() -> Int64 { return size }
 	
 	init(name:String) throws {
 		fileName = name
@@ -61,9 +61,12 @@ public class FileTarget {
 		bufData = UnsafeMutablePointer.allocate(capacity: bufSize)
 	}
 	deinit {
+		self.close()
+	}
+	func close() {
 		bufData.deallocate(capacity: bufSize)
-		close(fileFD)
-		if removeOnClose {
+		Darwin.close(fileFD)
+		if removeOnClose{
 			unlink(fileName)
 		}
 	}

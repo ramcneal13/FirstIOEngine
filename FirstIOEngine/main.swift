@@ -40,6 +40,10 @@ func main() {
 			exit(1)
 		}
 	}
+	if configStr == "" {
+		print("Usage: \(commandName) -c=<config-file>")
+		exit(1)
+	}
 	do {
 		try parser = ParseINIConfig(name: configStr)
 	} catch FileErrors.openFailure(let fileName, let e) {
@@ -56,37 +60,30 @@ func main() {
 
 	if let jobList = parser?.requestJobs() {
 		for jobName in jobList {
-			var fileName = ""
-			parser?.setParam(jobName, "name") { f in fileName = f }
-			var f:FileTarget
-			do {
-				try f = FileTarget(name: fileName)
-			} catch {
-				print("Failed to open: \(fileName)")
-				exit(1)
-			}
-			parser?.setParam(jobName, "size") { s in f.sizeStr = s }
-			if f.prepFile() == false {
-				print("Failed to prep \(fileName), probably invalid size")
-				exit(1)
-			}
-			let job = JobAction(f)
+			let job = JobAction()
+			parser?.setParam(jobName, "size") { s in job.sizeStr = s }
+			parser?.setParam(jobName, "name") { v in job.fileNameStr = v}
 			parser?.setParam(jobName, "pattern") { v in job.patternStr = v}
 			parser?.setParam(jobName, "runtime") { v in job.runTimeStr = v}
 			parser?.setParam(jobName, "iodepth") { v in job.ioDepthStr = v}
 			parser?.setParam(jobName, "verbose") { v in job.verboseStr = v}
 
+			if job.prep() == false {
+				print("Failed to prep job[\(jobName)]")
+				exit(1)
+			}
 			if verbose {
 				print("[]---- \(jobName) ----[]")
-				outputInColumn(array: ["Size":f.sizeStr, "RunTime":job.runTimeStr,
+				outputInColumn(array: ["Size":job.sizeStr, "RunTime":job.runTimeStr,
 						       "Pattern":job.patternStr, "iodepth":job.ioDepthStr,
-						       "File":fileName, "Verbose":job.verboseStr])
+						       "File":job.fileNameStr, "Verbose":job.verboseStr])
 			}
 			if job.isValid() {
 				job.execute()
 			} else {
 				print("One of the params is preventing job from starting")
 			}
+			job.close()
 		}
 	}
 }
