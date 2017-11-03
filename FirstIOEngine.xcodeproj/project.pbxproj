@@ -15,6 +15,7 @@
 		9CB00DA01FA3CE6B005A7A4A /* main.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CB00D9F1FA3CE6B005A7A4A /* main.swift */; };
 		9CB2D9481FAB8FA800DC52B4 /* ParseINI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CB2D9471FAB8FA800DC52B4 /* ParseINI.swift */; };
 		9CCFCB9F1FABEA9E00585D20 /* Histogram.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9CCFCB9E1FABEA9E00585D20 /* Histogram.swift */; };
+		9CCFCBA31FAC101C00585D20 /* getwinsize.c in Sources */ = {isa = PBXBuildFile; fileRef = 9CCFCBA21FAC101C00585D20 /* getwinsize.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -39,6 +40,9 @@
 		9CB00D9F1FA3CE6B005A7A4A /* main.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = main.swift; sourceTree = "<group>"; };
 		9CB2D9471FAB8FA800DC52B4 /* ParseINI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParseINI.swift; sourceTree = "<group>"; };
 		9CCFCB9E1FABEA9E00585D20 /* Histogram.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Histogram.swift; sourceTree = "<group>"; };
+		9CCFCBA01FAC101C00585D20 /* FirstIOEngine-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "FirstIOEngine-Bridging-Header.h"; sourceTree = "<group>"; };
+		9CCFCBA11FAC101C00585D20 /* getwinsize.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = getwinsize.h; sourceTree = "<group>"; };
+		9CCFCBA21FAC101C00585D20 /* getwinsize.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = getwinsize.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -79,6 +83,9 @@
 				9CB2D9471FAB8FA800DC52B4 /* ParseINI.swift */,
 				9CA9B7981FA9770600F3D546 /* Stats.swift */,
 				9CCFCB9E1FABEA9E00585D20 /* Histogram.swift */,
+				9CCFCBA11FAC101C00585D20 /* getwinsize.h */,
+				9CCFCBA21FAC101C00585D20 /* getwinsize.c */,
+				9CCFCBA01FAC101C00585D20 /* FirstIOEngine-Bridging-Header.h */,
 			);
 			path = FirstIOEngine;
 			sourceTree = "<group>";
@@ -115,6 +122,7 @@
 				TargetAttributes = {
 					9CB00D9B1FA3CE6B005A7A4A = {
 						CreatedOnToolsVersion = 9.0.1;
+						LastSwiftMigration = 0910;
 						ProvisioningStyle = Automatic;
 					};
 				};
@@ -146,6 +154,7 @@
 				9CA9B7991FA9770600F3D546 /* Stats.swift in Sources */,
 				9CB00DA01FA3CE6B005A7A4A /* main.swift in Sources */,
 				9CB2D9481FAB8FA800DC52B4 /* ParseINI.swift in Sources */,
+				9CCFCBA31FAC101C00585D20 /* getwinsize.c in Sources */,
 				9C580FEE1FA6C84F00181EF1 /* JobAction.swift in Sources */,
 				9C580FF21FA6CB6000181EF1 /* utils.swift in Sources */,
 				9C580FF41FA7D23C00181EF1 /* QueueSupport.swift in Sources */,
@@ -264,8 +273,12 @@
 		9CB00DA41FA3CE6B005A7A4A /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OBJC_BRIDGING_HEADER = "FirstIOEngine/FirstIOEngine-Bridging-Header.h";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 4.0;
 			};
 			name = Debug;
@@ -273,8 +286,11 @@
 		9CB00DA51FA3CE6B005A7A4A /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_STYLE = Automatic;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OBJC_BRIDGING_HEADER = "FirstIOEngine/FirstIOEngine-Bridging-Header.h";
 				SWIFT_VERSION = 4.0;
 			};
 			name = Release;

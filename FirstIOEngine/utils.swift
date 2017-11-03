@@ -15,7 +15,10 @@ enum ConvertMultiplier {
 }
 
 extension TimeInterval{
-	var microseconds: Int { return Int((self.truncatingRemainder(dividingBy: 1)) * 1_000_000) }
+	var microseconds: Int {
+		get {return Int((self.truncatingRemainder(dividingBy: 1)) * 1_000_000) }
+		set(input) { self = TimeInterval(input) * 0.000_001}
+	}
 	var seconds: Int { return Int(self.remainder(dividingBy: 60)) }
 	var minutes: Int { return Int((self/60).remainder(dividingBy: 60)) }
 	var hours: Int { return Int(self / (60*60)) }

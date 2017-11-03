@@ -47,14 +47,19 @@ public class Histogram {
 				lastIdx = k
 			}
 		}
-		let binColumn = String(format: "%d", 2 ^^ lastIdx).count
+		let winsz = getwinsize()
+		var tv:TimeInterval = 0
+		tv.microseconds = 2 ^^ lastIdx
+		let binColumn = String(format: "%@", tv.stringTime).count
 		let countColumn = String(format: "%d", largestCount).count
-		let scalerCol = 80 - binColumn - countColumn - 2
+		let scalerCol = Int(winsz) - binColumn - countColumn - 2
 		let scaler = largestCount / Int64(scalerCol)
-		
+
+		dashLine(count: scalerCol, offset: binColumn)
 		for (k, v) in Bins.enumerated() {
 			if k >= firstIdx && k <= lastIdx {
-				print(String(format: "%*d|", binColumn, 2 ^^ k), terminator: "")
+				tv.microseconds = 2 ^^ k
+				print(String(format: "%*s|", binColumn, strToUnsafe(tv.stringTime)!), terminator: "")
 				for _ in 0..<(v/scaler) {
 					print("@", terminator: "")
 				}
@@ -64,5 +69,15 @@ public class Histogram {
 				print(String(format: "|%*d", countColumn, v))
 			}
 		}
+		dashLine(count: scalerCol, offset: binColumn)
+	}
+	
+	private func dashLine(count:Int, offset:Int = 0) {
+		if offset != 0 {
+			print(String(format: "%*s", offset, strToUnsafe(" ")!), terminator: "")
+		}
+		print("+", terminator: "")
+		for _ in 0..<count { print("-", terminator: "") }
+		print("+")
 	}
 }
