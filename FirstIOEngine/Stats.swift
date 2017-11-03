@@ -83,17 +83,21 @@ class StatReporter {
 			return
 		}
 	}
-	
+
 	func dumpStats(runtime runTimeSeconds:Int64) {
+		print("Summary:")
 		/* ---- Prevent possible divide by zero ---- */
 		if ioReads == 0 {
 			ioReads = 1
 		}
-		print(String(format: "Avg throughput: %@",
+		let avgStr = "Avg throughput"
+		let maxLabel = avgStr.count
+		print(String(format: "  %*s: %@", maxLabel, strToUnsafe(avgStr)!,
 			     ByteCountFormatter.string(fromByteCount: (bytesRead + bytesWrite) / runTimeSeconds,
 						       countStyle: .binary)))
 
-		var msg = String(format: "Read: low=%@/avg=%@/high=%@", lowLatRead.stringTime,
+		var msg = String(format: "  %*s: low=%@/avg=%@/high=%@", maxLabel, strToUnsafe("Read")!,
+				 lowLatRead.stringTime,
 				TimeInterval(avgLatRead / TimeInterval(ioReads)).stringTime,
 				highLatRead.stringTime)
 
@@ -102,7 +106,8 @@ class StatReporter {
 		if ioWrites == 0 {
 			ioWrites = 1
 		}
-		msg = String(format: "Write: low=%@/avg=%@/high=%@", lowLatWrite.stringTime,
+		msg = String(format: "  %*s: low=%@/avg=%@/high=%@", maxLabel, strToUnsafe("Write")!,
+			     lowLatWrite.stringTime,
 			     TimeInterval(avgLatWrite / TimeInterval(ioWrites)).stringTime,
 		             highLatWrite.stringTime)
 		print(msg)

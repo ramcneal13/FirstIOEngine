@@ -101,7 +101,7 @@ public class ParseINIConfig {
 		return true
 	}
 	
-	func setParam(section:String, param:String, process: ((String) -> Void)) {
+	func setParam(_ section:String, _ param:String, process: ((String) -> Void)) {
 		if let p = requestParam(section: section, param: param) {
 			process(p)
 		}

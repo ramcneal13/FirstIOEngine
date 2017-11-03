@@ -52,12 +52,12 @@ func main() {
 	if parser?.parse() == false {
 		exit(1)
 	}
-	parser?.setParam(section: "global", param: "verbose") { _ in verbose = true }
+	parser?.setParam("global", "verbose") { _ in verbose = true }
 
 	if let jobList = parser?.requestJobs() {
 		for jobName in jobList {
 			var fileName = ""
-			parser?.setParam(section: jobName, param: "name") { f in fileName = f }
+			parser?.setParam(jobName, "name") { f in fileName = f }
 			var f:FileTarget
 			do {
 				try f = FileTarget(name: fileName)
@@ -65,18 +65,23 @@ func main() {
 				print("Failed to open: \(fileName)")
 				exit(1)
 			}
-			parser?.setParam(section: jobName, param: "size") { s in f.sizeStr = s }
+			parser?.setParam(jobName, "size") { s in f.sizeStr = s }
 			if f.prepFile() == false {
 				print("Failed to prep \(fileName), probably invalid size")
 				exit(1)
 			}
-			let job = JobAction(f, verbose)
-			parser?.setParam(section: jobName, param: "pattern") { v in job.patternStr = v}
-			parser?.setParam(section: jobName, param: "runtime") { v in job.runTimeStr = v}
-			parser?.setParam(section: jobName, param: "iodepth") { v in job.ioDepth = Int(v) ?? 1}
+			let job = JobAction(f)
+			parser?.setParam(jobName, "pattern") { v in job.patternStr = v}
+			parser?.setParam(jobName, "runtime") { v in job.runTimeStr = v}
+			parser?.setParam(jobName, "iodepth") { v in job.ioDepthStr = v}
+			parser?.setParam(jobName, "verbose") { v in job.verboseStr = v}
 
-			print(String(format: "Size: %@, Runtime: %@, Pattern: %@, IODepth: %d", f.sizeStr, job.runTimeStr,
-				     job.patternStr, job.ioDepth))
+			if verbose {
+				print("[]---- \(jobName) ----[]")
+				outputInColumn(array: ["Size":f.sizeStr, "RunTime":job.runTimeStr,
+						       "Pattern":job.patternStr, "iodepth":job.ioDepthStr,
+						       "File":fileName, "Verbose":job.verboseStr])
+			}
 			if job.isValid() {
 				job.execute()
 			} else {
@@ -86,4 +91,19 @@ func main() {
 	}
 }
 
+func outputInColumn(array:[String:String]) {
+	var maxName:Int = 0, maxValue:Int = 0
+	
+	for (k, v) in array {
+		if maxName < k.count {
+			maxName = k.count
+		}
+		if maxValue < v.count {
+			maxValue = v.count
+		}
+	}
+	for (k, v) in array {
+		print(String(format: "%*s : %@", maxName, strToUnsafe(k)!, v))
+	}
+}
 main()

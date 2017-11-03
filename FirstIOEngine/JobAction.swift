@@ -14,8 +14,9 @@ public class JobAction {
 	private var pattern:AccessPattern
 	private var runnerLoop = false
 	private var reporter:StatReporter?
+	private var verbose:Bool = false
 	/* ---- Number of threads to start for asynchronous I/O ---- */
-	var ioDepth = 8
+	private var ioDepth = 1
 	
 	var runTimeStr:String {
 		get {return formatter.string(from: runTime)!}
@@ -25,9 +26,25 @@ public class JobAction {
 		get {return pattern.text}
 		set(input) {pattern.text = input}
 	}
+	var ioDepthStr:String {
+		get {return String(ioDepth)}
+		set(input) {ioDepth = Int(input) ?? 1}
+	}
+	var verboseStr:String {
+		get {return String(verbose)}
+		set(input) {
+			if input == "true" {
+				verbose = true
+				if reporter == nil {
+					reporter = StatReporter()
+				}
+			}
+		}
+	}
 	private var target:FileTarget
 	
-	init(_ t:FileTarget, _ verbose:Bool = false) {
+	init(_ t:FileTarget, _ v:Bool = false) {
+		verbose = v
 		target = t
 		formatter.unitsStyle = .full
 		formatter.includesApproximationPhrase = true
@@ -86,10 +103,9 @@ public class JobAction {
 			commSema.wait()
 		}
 		reporter?.stop()
+		print("")
 		if let r = reporter {
 			r.dumpStats(runtime: Int64(runTime))
-		} else {
-			print("\n")
 		}
 	}
 	

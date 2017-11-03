@@ -37,6 +37,11 @@ extension TimeInterval{
 	}
 }
 
+public func strToUnsafe(_ s:String) -> UnsafePointer<Int8>? {
+	return (s as NSString).utf8String //iOS10+ or .UTF8String otherwise
+}
+
+
 public func stringFromTime(interval: TimeInterval) -> String {
 	let ms = Int(interval.truncatingRemainder(dividingBy: 1) * 1000)
 	let formatter = DateComponentsFormatter()
