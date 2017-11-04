@@ -11,8 +11,11 @@
 int getwinsize()
 {
 	struct winsize w;
-	if (ioctl(0, TIOCGWINSZ, &w) != 0)
-		return 72;
-	else
+	if (ioctl(0, TIOCGWINSZ, &w) != 0) {
+		return 80;
+	} else if (w.ws_col == 0) {
+		return 80;
+	} else {
 		return w.ws_col;
+	}
 }

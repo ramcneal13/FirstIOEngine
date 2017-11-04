@@ -26,7 +26,6 @@ public class JobAction {
 		set(input) {
 			sizeStr_l = input
 			target?.sizeStr = input
-			pattern.setSize(v: target?.getSize() ?? 0)
 		}
 	}
 	var fileNameStr:String {
@@ -41,7 +40,6 @@ public class JobAction {
 			if sizeStr_l != "" {
 				target?.sizeStr = sizeStr_l
 			}
-			pattern.setSize(v: target?.getSize() ?? 0)
 		}
 	}
 	var runTimeStr:String {
@@ -87,7 +85,11 @@ public class JobAction {
 		reporter?.stop()
 	}
 	
-	func prep() -> Bool { return target?.prepFile() ?? false}
+	func prep() -> Bool {
+		let rval = target?.prepFile() ?? false
+		pattern.setSize(v: target?.getSize() ?? 0)
+		return rval
+	}
 	
 	/* ---- test for anything that might prevent JobAction from starting ---- */
 	func isValid() -> Bool { return pattern.isValid() }

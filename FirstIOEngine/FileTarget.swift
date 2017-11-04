@@ -64,7 +64,6 @@ public class FileTarget {
 		self.close()
 	}
 	func close() {
-		bufData.deallocate(capacity: bufSize)
 		Darwin.close(fileFD)
 		if removeOnClose{
 			unlink(fileName)
@@ -95,17 +94,17 @@ public class FileTarget {
 				/* ---- File with existing data is good to go ---- */
 				return true
 			}
-			let bufHandle = FileHandle(fileDescriptor: fileFD)
-			let bufSize = 1024 * 1024
-			var bufData = Data(capacity: bufSize)
-			for pos in 0..<bufSize {
-				bufData.append(UInt8(pos&0xff))
+			let initHandle = FileHandle(fileDescriptor: fileFD)
+			let initSize = 1024 * 1024
+			var initData = Data(capacity: initSize)
+			for pos in 0..<initSize {
+				initData.append(UInt8(pos&0xff))
 			}
-			for _ in stride(from: 0, to: size, by: bufSize) {
-				bufHandle.write(bufData)
+			for _ in stride(from: 0, to: size, by: initSize) {
+				initHandle.write(initData)
 			}
-			bufHandle.synchronizeFile()
-			bufHandle.seek(toFileOffset: 0)
+			initHandle.synchronizeFile()
+			initHandle.seek(toFileOffset: 0)
 		}
 		return true
 	}

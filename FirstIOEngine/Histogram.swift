@@ -53,7 +53,10 @@ public class Histogram {
 		let binColumn = String(format: "%@", tv.stringTime).count
 		let countColumn = String(format: "%d", largestCount).count
 		let scalerCol = Int(winsz) - binColumn - countColumn - 2
-		let scaler = largestCount / Int64(scalerCol)
+		var scaler = largestCount / Int64(scalerCol)
+		if (largestCount / scaler) > scalerCol {
+			scaler += 1
+		}
 
 		dashLine(count: scalerCol, offset: binColumn)
 		for (k, v) in Bins.enumerated() {
